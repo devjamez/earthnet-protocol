@@ -6,11 +6,9 @@
 //! regeneration (`cargo run --example gen_vectors`) and a `protocol_version` bump.
 
 use earthnet_protocol::{
-    sign, verify, ConfirmedEvent, EvidenceKind, Location, Observation, SourceType,
-    PROTOCOL_VERSION,
+    sign, verify, ConfirmedEvent, EvidenceKind, Location, Observation, SourceType, PROTOCOL_VERSION,
 };
 use ed25519_dalek::SigningKey;
-use prost::Message;
 
 const OBS_CANONICAL: &str = "08011210abababababababababababababababab1a20ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c20023080808c9eede2cfee173814420a0a0536366a643210e0124d0000f04050015da69b443c";
 const OBS_SIG: &str = "b43747d690bb7c40c630e859feb80dc99db835b41521d6fb17ae68edbfd5c874c47af94163eff1e37e2ef5f95059526cda7bdb5d6b0aa4a128632eca9602aa09";
@@ -79,16 +77,32 @@ fn confirmed_event() -> (SigningKey, ConfirmedEvent) {
 #[test]
 fn observation_vector_locked() {
     let (_k, obs) = observation();
-    assert_eq!(canonical(&obs), OBS_CANONICAL, "Observation canonical encoding drifted");
-    assert_eq!(hex(&obs.signature), OBS_SIG, "Observation signature drifted");
+    assert_eq!(
+        canonical(&obs),
+        OBS_CANONICAL,
+        "Observation canonical encoding drifted"
+    );
+    assert_eq!(
+        hex(&obs.signature),
+        OBS_SIG,
+        "Observation signature drifted"
+    );
     assert!(verify(&obs).is_ok());
 }
 
 #[test]
 fn confirmed_event_vector_locked() {
     let (_k, evt) = confirmed_event();
-    assert_eq!(canonical(&evt), EVT_CANONICAL, "ConfirmedEvent canonical encoding drifted");
-    assert_eq!(hex(&evt.signature), EVT_SIG, "ConfirmedEvent signature drifted");
+    assert_eq!(
+        canonical(&evt),
+        EVT_CANONICAL,
+        "ConfirmedEvent canonical encoding drifted"
+    );
+    assert_eq!(
+        hex(&evt.signature),
+        EVT_SIG,
+        "ConfirmedEvent signature drifted"
+    );
     assert!(verify(&evt).is_ok());
 }
 
@@ -97,6 +111,9 @@ fn vectors_file_matches_locked_constants() {
     let json = std::fs::read_to_string("tests/vectors/v0_1.json")
         .expect("run `cargo run --example gen_vectors` first");
     for c in [OBS_CANONICAL, OBS_SIG, EVT_CANONICAL, EVT_SIG] {
-        assert!(json.contains(c), "committed vectors file out of sync with locked constants");
+        assert!(
+            json.contains(c),
+            "committed vectors file out of sync with locked constants"
+        );
     }
 }

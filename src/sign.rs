@@ -58,7 +58,8 @@ fn signing_payload<T: Signed>(msg: &T) -> Vec<u8> {
     let mut buf = Vec::with_capacity(T::DOMAIN.len() + msg.encoded_len());
     buf.extend_from_slice(T::DOMAIN);
     // Encoding into a Vec is infallible in prost.
-    msg.encode(&mut buf).expect("prost encode into Vec is infallible");
+    msg.encode(&mut buf)
+        .expect("prost encode into Vec is infallible");
     buf
 }
 
@@ -73,7 +74,10 @@ pub fn sign<T: Signed>(key: &SigningKey, msg: &mut T) {
 
 /// Verifies the signature carried in `msg` against the pubkey carried in `msg`.
 pub fn verify<T: Signed>(msg: &T) -> Result<(), SignError> {
-    let pk: [u8; 32] = msg.pubkey().try_into().map_err(|_| SignError::BadPublicKey)?;
+    let pk: [u8; 32] = msg
+        .pubkey()
+        .try_into()
+        .map_err(|_| SignError::BadPublicKey)?;
     let vk = VerifyingKey::from_bytes(&pk).map_err(|_| SignError::BadPublicKey)?;
 
     let sig_bytes: [u8; 64] = msg

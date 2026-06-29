@@ -12,8 +12,7 @@
 //! Run: `cargo run --example gen_vectors`
 
 use earthnet_protocol::{
-    sign, ConfirmedEvent, EvidenceKind, Location, Observation, Signed, SourceType,
-    PROTOCOL_VERSION,
+    sign, ConfirmedEvent, EvidenceKind, Location, Observation, Signed, SourceType, PROTOCOL_VERSION,
 };
 use ed25519_dalek::SigningKey;
 use prost::Message;
@@ -106,16 +105,22 @@ fn main() {
     eprintln!("wrote {}", path.display());
 
     // Echo the locking constants for the regression test.
-    println!("OBS_CANONICAL={}", hex(&{
-        let mut b = obs.clone();
-        b.signature = Vec::new();
-        b.encode_to_vec()
-    }));
+    println!(
+        "OBS_CANONICAL={}",
+        hex(&{
+            let mut b = obs.clone();
+            b.signature = Vec::new();
+            b.encode_to_vec()
+        })
+    );
     println!("OBS_SIG={}", hex(&obs.signature));
-    println!("EVT_CANONICAL={}", hex(&{
-        let mut b = evt.clone();
-        b.signature = Vec::new();
-        b.encode_to_vec()
-    }));
+    println!(
+        "EVT_CANONICAL={}",
+        hex(&{
+            let mut b = evt.clone();
+            b.signature = Vec::new();
+            b.encode_to_vec()
+        })
+    );
     println!("EVT_SIG={}", hex(&evt.signature));
 }
