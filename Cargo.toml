@@ -1,0 +1,21 @@
+[package]
+name = "earthnet-protocol"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+license = "Apache-2.0"
+description = "Signed seismic event wire format for the EarthNet earthquake early-warning network."
+repository = "https://github.com/develone/earthnet-protocol"
+keywords = ["earthquake", "early-warning", "protocol", "ed25519", "protobuf"]
+categories = ["encoding", "cryptography"]
+
+[dependencies]
+prost = "0.13"
+ed25519-dalek = "2"
+
+[build-dependencies]
+prost-build = "0.13"
+protox = "0.7"
+
+[dev-dependencies]
+rand = "0.8"

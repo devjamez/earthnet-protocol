@@ -1,0 +1,77 @@
+syntax = "proto3";
+package earthnet.v1;
+
+// EarthNet wire format v0.1 — signed seismic events for earthquake early warning.
+// See PROTOCOL-v0.1-DRAFT.md for the normative signing scheme.
+// Two messages, two trust levels:
+//   Observation    = raw signed pick (low trust; phones need consensus >= N)
+//   ConfirmedEvent = post-fusion (high trust; triggers the alarm)
+
+// Location with privacy-controlled precision.
+// Phones: geohash of ~5 chars (~+-2.4 km). Official stations: exact (public).
+message Location {
+  string geohash     = 1; // base32 geohash
+  uint32 precision_m = 2; // declared precision in meters (consumer hint)
+}
+
+enum SourceType {
+  SOURCE_TYPE_UNSPECIFIED = 0;
+  SOURCE_TYPE_OFFICIAL    = 1; // official station via adapter (high trust, fires alone)
+  SOURCE_TYPE_PHONE       = 2; // phone (low trust, needs consensus >= N)
+}
+
+// Raw signed pick emitted by a sensor (phone or official station).
+message Observation {
+  uint32     protocol_version  = 1;  // = 1 in v0.1
+
+  bytes      observation_id    = 2;  // 16 random bytes, for dedup
+  bytes      pubkey            = 3;  // Ed25519 pubkey of the emitter (32B) = identity
+
+  SourceType source_type       = 4;
+  string     source_id         = 5;  // official station id (e.g. "CSN:GO01"); empty if phone
+
+  // Time: UTC nanoseconds. Clock sync is critical for early warning.
+  int64      captured_at_ns    = 6;  // wall-clock UTC ns of the pick
+  uint32     clock_uncert_ms   = 7;  // estimated clock uncertainty (NTP/GNSS)
+
+  Location   location          = 8;
+
+  // Pick features. NEVER raw waveform or audio. Derived values only.
+  float      sta_lta_ratio     = 9;  // STA/LTA detector ratio
+  bool       p_wave_detected   = 10;
+  float      estimated_pga     = 11; // estimated PGA (g), optional (0 if N/A)
+  float      reported_magnitude = 12; // official EEW sources only; 0 if N/A
+
+  bytes      signature         = 15; // Ed25519 (64B) over signing_payload
+}
+
+enum EvidenceKind {
+  EVIDENCE_KIND_UNSPECIFIED = 0;
+  EVIDENCE_KIND_OFFICIAL    = 1; // triggered by official source
+  EVIDENCE_KIND_CONSENSUS   = 2; // triggered by phone consensus
+  EVIDENCE_KIND_BOTH        = 3;
+}
+
+// Confirmed event post-fusion. TRIGGERS the alarm on the client.
+message ConfirmedEvent {
+  uint32   protocol_version = 1;  // = 1 in v0.1
+
+  bytes    event_id         = 2;  // 16B
+  bytes    pubkey           = 3;  // pubkey of the confirming node (32B)
+
+  int64    origin_time_ns   = 4;  // estimated earthquake origin time (UTC ns)
+  int64    issued_at_ns     = 5;  // when the node issued this event (UTC ns)
+
+  Location epicenter        = 6;
+  float    depth_km         = 7;  // optional, 0 if N/A
+  float    magnitude        = 8;
+  float    magnitude_uncert = 9;
+
+  EvidenceKind evidence     = 10;
+  uint32   num_observations = 11; // how many observations fed the fusion
+  repeated bytes obs_ids    = 12; // observation_id of the picks used (audit)
+
+  bytes    supersedes       = 13; // previous event_id this revises/replaces; empty if first
+
+  bytes    signature        = 15; // Ed25519 (64B) over signing_payload
+}
