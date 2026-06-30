@@ -7,6 +7,17 @@ package earthnet.v1;
 //   Observation    = raw signed pick (low trust; phones need consensus >= N)
 //   ConfirmedEvent = post-fusion (high trust; triggers the alarm)
 
+// Privacy level for a signal's location (v0.2). Defined now; wiring it into
+// Location is a later slice (adding a field there would touch every existing
+// Location construction across the stack). For now privacy is carried per
+// modality by the schema registry policy.
+enum PrivacyLevel {
+  PRIVACY_LEVEL_EXACT     = 0; // as declared (official stations, public)
+  PRIVACY_LEVEL_COARSE    = 1; // intentionally coarsened
+  PRIVACY_LEVEL_CELL_ONLY = 2; // only the geo-cell is meaningful
+  PRIVACY_LEVEL_NONE      = 3; // no usable location
+}
+
 // Location with privacy-controlled precision.
 // Phones: geohash of ~5 chars (~+-2.4 km). Official stations: exact (public).
 message Location {
@@ -74,4 +85,68 @@ message ConfirmedEvent {
   bytes    supersedes       = 13; // previous event_id this revises/replaces; empty if first
 
   bytes    signature        = 15; // Ed25519 (64B) over signing_payload
+}
+
+// ===========================================================================
+// v0.2 — multi-modal Signal envelope (see PROTOCOL-v0.2-DRAFT.md).
+// The narrow waist: coarse fabric fields + an opaque, registry-typed payload.
+// The v0.1 Observation maps to Signal{MOTION, schema_id=seismic.pick.v1}.
+// ===========================================================================
+
+// Coarse, slow-changing class for routing/sharding WITHOUT parsing the payload.
+enum ModalityClass {
+  MODALITY_CLASS_UNSPECIFIED    = 0;
+  MODALITY_CLASS_MOTION         = 1; // accel, gyro, seismometer waveform
+  MODALITY_CLASS_FIELD          = 2; // magnetometer, electric field
+  MODALITY_CLASS_POSITION       = 3; // GNSS displacement, tilt
+  MODALITY_CLASS_ATMOSPHERIC    = 4; // barometer, temperature, humidity, wind
+  MODALITY_CLASS_ACOUSTIC       = 5; // microphone FFT, infrasound
+  MODALITY_CLASS_IMAGING        = 6; // camera-derived features (never raw)
+  MODALITY_CLASS_ENVIRONMENTAL  = 7; // generic IoT / citizen sensors
+  MODALITY_CLASS_REMOTE_SENSING = 8; // satellite, weather feeds
+  MODALITY_CLASS_DERIVED        = 9; // detector/agent outputs (a pick, an anomaly)
+}
+
+// Capability tier of the emitting device.
+enum DeviceClass {
+  DEVICE_CLASS_UNSPECIFIED = 0;
+  DEVICE_CLASS_PHONE       = 1;
+  DEVICE_CLASS_STATION     = 2;
+  DEVICE_CLASS_IOT         = 3;
+  DEVICE_CLASS_SATELLITE   = 4;
+  DEVICE_CLASS_DERIVED     = 5;
+}
+
+// The multi-modal signal envelope. Stable + universal; modalities evolve in the
+// schema registry, not here. Signed exactly like v0.1 (domain || encode w/ empty
+// signature); the signature covers the opaque `payload` bytes verbatim.
+message Signal {
+  uint32        protocol_version = 1;  // = 2
+
+  bytes         observation_id   = 2;  // 16 random bytes (idempotency)
+  bytes         pubkey           = 3;  // Ed25519 pubkey (32B) = identity
+
+  ModalityClass modality_class   = 4;  // coarse routing class
+  uint64        schema_id        = 5;  // precise {modality, version} -> registry
+  SourceType    source_type      = 6;
+  DeviceClass   device_class     = 7;
+
+  Location      location         = 8;
+  int64         captured_at_ns   = 9;
+  uint32        clock_uncert_ms  = 10;
+
+  float         quality          = 11; // 0..1 self-reported SNR (hint, NOT trusted)
+
+  bytes         payload          = 12; // opaque; meaning lives in the schema (schema_id)
+
+  bytes         signature        = 13; // Ed25519 (64B) over signing_payload
+}
+
+// Payload schema for schema_id = SCHEMA_SEISMIC_PICK_V1. Carries exactly the
+// v0.1 Observation pick semantics, so v0.1 maps in losslessly.
+message SeismicPick {
+  float sta_lta_ratio      = 1;
+  bool  p_wave_detected    = 2;
+  float estimated_pga      = 3; // g, 0 if N/A
+  float reported_magnitude = 4; // official EEW only; 0 if N/A
 }

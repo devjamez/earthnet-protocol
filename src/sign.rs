@@ -15,6 +15,8 @@ use prost::Message;
 pub const DOMAIN_OBSERVATION: &[u8] = b"earthnet-obs-v1";
 /// Domain-separation tag for [`ConfirmedEvent`](crate::ConfirmedEvent).
 pub const DOMAIN_CONFIRMED_EVENT: &[u8] = b"earthnet-evt-v1";
+/// Domain-separation tag for the v0.2 [`Signal`](crate::Signal) envelope.
+pub const DOMAIN_SIGNAL: &[u8] = b"earthnet-signal-v2";
 
 /// A protobuf message that carries an Ed25519 identity + signature and can be
 /// signed/verified with the EarthNet scheme.
@@ -109,6 +111,19 @@ impl Signed for crate::Observation {
 
 impl Signed for crate::ConfirmedEvent {
     const DOMAIN: &'static [u8] = DOMAIN_CONFIRMED_EVENT;
+    fn pubkey(&self) -> &[u8] {
+        &self.pubkey
+    }
+    fn signature(&self) -> &[u8] {
+        &self.signature
+    }
+    fn set_signature(&mut self, sig: Vec<u8>) {
+        self.signature = sig;
+    }
+}
+
+impl Signed for crate::Signal {
+    const DOMAIN: &'static [u8] = DOMAIN_SIGNAL;
     fn pubkey(&self) -> &[u8] {
         &self.pubkey
     }
