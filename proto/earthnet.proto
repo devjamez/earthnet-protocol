@@ -63,6 +63,27 @@ enum EvidenceKind {
   EVIDENCE_KIND_BOTH        = 3;
 }
 
+// Trust tier of a ConfirmedEvent (v0.2). The two planes:
+//   PROVISIONAL = a single node's result — warn early, NOT life-safety-certified
+//   ALERT       = certified (official-authoritative, or M-of-N node attested)
+// A consensus event is emitted PROVISIONAL and later UPGRADED to ALERT by a
+// revision (supersedes) once it carries >= M attestations. See
+// docs/DESIGN-multi-node-attestation.md ("provisional now, certify in flight").
+enum ConfidenceTier {
+  CONFIDENCE_TIER_UNSPECIFIED = 0;
+  CONFIDENCE_TIER_RESEARCH    = 1; // experimental / research plane
+  CONFIDENCE_TIER_PROVISIONAL = 2; // warn early; not yet certified
+  CONFIDENCE_TIER_ALERT       = 3; // certified for life-safety
+}
+
+// One node's co-signature attesting to a ConfirmedEvent (v0.2). Carrier for the
+// future M-of-N threshold; appended AFTER the originator signs, so it is NOT
+// covered by the originator's / attestors' signatures (see sign.rs).
+message NodeAttestation {
+  bytes node_pubkey = 1; // attesting node's Ed25519 pubkey (32B)
+  bytes signature   = 2; // Ed25519 (64B) over the event's signing payload
+}
+
 // Confirmed event post-fusion. TRIGGERS the alarm on the client.
 message ConfirmedEvent {
   uint32   protocol_version = 1;  // = 1 in v0.1
@@ -84,7 +105,11 @@ message ConfirmedEvent {
 
   bytes    supersedes       = 13; // previous event_id this revises/replaces; empty if first
 
-  bytes    signature        = 15; // Ed25519 (64B) over signing_payload
+  ConfidenceTier tier       = 14; // v0.2; 0 = UNSPECIFIED (v0.1 default)
+
+  bytes    signature        = 15; // Ed25519 (64B) over signing_payload (excludes attestations)
+
+  repeated NodeAttestation attestations = 16; // v0.2; appended after signing, NOT signed by originator
 }
 
 // ===========================================================================

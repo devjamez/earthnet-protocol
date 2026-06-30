@@ -29,6 +29,13 @@ pub trait Signed: Message + Clone {
     fn signature(&self) -> &[u8];
     /// Overwrite the signature field.
     fn set_signature(&mut self, sig: Vec<u8>);
+    /// Clears every field excluded from the signing payload. Defaults to just the
+    /// signature; [`ConfirmedEvent`](crate::ConfirmedEvent) also clears
+    /// `attestations` (co-signatures are appended after signing and must not be
+    /// covered by it). Applied to a throwaway clone inside [`signing_payload`].
+    fn clear_signing_fields(&mut self) {
+        self.set_signature(Vec::new());
+    }
 }
 
 /// Errors from [`verify`].
@@ -55,20 +62,22 @@ impl core::fmt::Display for SignError {
 
 impl std::error::Error for SignError {}
 
-/// Builds `domain || encode(msg)`. Caller must clear the signature field first.
+/// Builds `domain || deterministic_encode(msg with signing fields cleared)`.
+/// Clears on a throwaway clone, so the caller's message is untouched.
 fn signing_payload<T: Signed>(msg: &T) -> Vec<u8> {
-    let mut buf = Vec::with_capacity(T::DOMAIN.len() + msg.encoded_len());
+    let mut bare = msg.clone();
+    bare.clear_signing_fields();
+    let mut buf = Vec::with_capacity(T::DOMAIN.len() + bare.encoded_len());
     buf.extend_from_slice(T::DOMAIN);
     // Encoding into a Vec is infallible in prost.
-    msg.encode(&mut buf)
+    bare.encode(&mut buf)
         .expect("prost encode into Vec is infallible");
     buf
 }
 
-/// Signs `msg` in place: clears the signature field, computes the payload, and
-/// writes the resulting 64-byte signature back into the message.
+/// Signs `msg` in place: computes the payload (over a cleared clone) and writes
+/// the resulting 64-byte signature into the message's signature field.
 pub fn sign<T: Signed>(key: &SigningKey, msg: &mut T) {
-    msg.set_signature(Vec::new());
     let payload = signing_payload(msg);
     let sig = key.sign(&payload);
     msg.set_signature(sig.to_bytes().to_vec());
@@ -88,9 +97,7 @@ pub fn verify<T: Signed>(msg: &T) -> Result<(), SignError> {
         .map_err(|_| SignError::BadSignature)?;
     let sig = Signature::from_bytes(&sig_bytes);
 
-    let mut bare = msg.clone();
-    bare.set_signature(Vec::new());
-    let payload = signing_payload(&bare);
+    let payload = signing_payload(msg);
 
     vk.verify(&payload, &sig)
         .map_err(|_| SignError::VerificationFailed)
@@ -119,6 +126,13 @@ impl Signed for crate::ConfirmedEvent {
     }
     fn set_signature(&mut self, sig: Vec<u8>) {
         self.signature = sig;
+    }
+    fn clear_signing_fields(&mut self) {
+        self.signature = Vec::new();
+        // Attestations are co-signatures appended AFTER the originator signs;
+        // excluding them keeps the originator/attestor signature stable as
+        // attestations accumulate.
+        self.attestations.clear();
     }
 }
 

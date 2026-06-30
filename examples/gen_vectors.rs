@@ -89,7 +89,9 @@ fn main() {
         num_observations: 3,
         obs_ids: vec![vec![0xAB; 16], vec![0x01; 16]],
         supersedes: Vec::new(),
+        tier: 0, // UNSPECIFIED — keeps the v0.1 vector byte-identical
         signature: Vec::new(),
+        attestations: Vec::new(),
     };
     sign(&ekey, &mut evt);
 

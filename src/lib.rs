@@ -14,8 +14,8 @@ pub mod detect;
 pub mod sign;
 
 pub use proto::{
-    ConfirmedEvent, DeviceClass, EvidenceKind, Location, ModalityClass, Observation, PrivacyLevel,
-    SeismicPick, Signal, SourceType,
+    ConfidenceTier, ConfirmedEvent, DeviceClass, EvidenceKind, Location, ModalityClass,
+    NodeAttestation, Observation, PrivacyLevel, SeismicPick, Signal, SourceType,
 };
 pub use sign::{sign, verify, SignError, Signed};
 

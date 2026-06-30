@@ -51,7 +51,9 @@ fn sample_event(pubkey: Vec<u8>) -> ConfirmedEvent {
         num_observations: 3,
         obs_ids: vec![vec![0xAB; 16], vec![0x01; 16]],
         supersedes: Vec::new(),
+        tier: 0, // v0.1 default (UNSPECIFIED)
         signature: Vec::new(),
+        attestations: Vec::new(),
     }
 }
 
