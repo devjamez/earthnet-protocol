@@ -1,4 +1,4 @@
-> 🌎 Part of **[EarthNet](https://github.com/devjamez/earthnet)** — open-source, decentralized earthquake early warning for Latin America.
+> 🌎 Part of **[EarthNet](https://github.com/EarthNet-EEW/earthnet)** — open-source, decentralized earthquake early warning for Latin America.
 
 # earthnet-protocol
 
